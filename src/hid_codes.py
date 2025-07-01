@@ -1,0 +1,37 @@
+# Essential scan codes (convert strings to integers)
+HID_SCAN_CODES = {
+    'a': 0x04, 'b': 0x05, 'c': 0x06, 'd': 0x07, 'e': 0x08,
+    'f': 0x09, 'g': 0x0A, 'h': 0x0B, 'i': 0x0C, 'j': 0x0D,
+    'k': 0x0E, 'l': 0x0F, 'm': 0x10, 'n': 0x11, 'o': 0x12,
+    'p': 0x13, 'q': 0x14, 'r': 0x15, 's': 0x16, 't': 0x17,
+    'u': 0x18, 'v': 0x19, 'w': 0x1A, 'x': 0x1B, 'y': 0x1C, 'z': 0x1D,
+    '1': 0x1E, '2': 0x1F, '3': 0x20, '4': 0x21, '5': 0x22,
+    '6': 0x23, '7': 0x24, '8': 0x25, '9': 0x26, '0': 0x27,
+    'enter': 0x28, 'escape': 0x29, 'space': 0x2C,
+    'left': 0x50, 'right': 0x4F, 'up': 0x52, 'down': 0x51,
+    'f1': 0x3A, 'f2': 0x3B, 'f3': 0x3C, 'f4': 0x3D
+}
+
+# Modifier mappings (CRITICAL for macOS)
+MODIFIERS = {
+    'ctrl': 0x01,    # Left Control
+    'shift': 0x02,   # Left Shift  
+    'alt': 0x04,     # Left Alt
+    'cmd': 0x08      # Left Command (GUI key)
+}
+
+
+
+def shortcut_to_hid_report(shortcut_string):
+    parts = shortcut_string.lower().split('+')
+    
+    modifier_byte = 0x00
+    key_code = 0x00
+    
+    for part in parts:
+        if part in MODIFIERS:
+            modifier_byte |= MODIFIERS[part]
+        elif part in HID_SCAN_CODES:
+            key_code = HID_SCAN_CODES[part]
+    
+    return [modifier_byte, 0x00, key_code, 0x00, 0x00, 0x00, 0x00, 0x00]

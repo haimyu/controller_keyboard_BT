@@ -1,0 +1,10 @@
+{
+  "button_0": "cmd+s",
+  "button_1": "cmd+z", 
+  "button_2": "cmd+c",
+  "button_3": "cmd+v",
+  "joystick_left": "cmd+left",
+  "joystick_right": "cmd+right",
+  "joystick_up": "cmd+up", 
+  "joystick_down": "cmd+down"
+}
