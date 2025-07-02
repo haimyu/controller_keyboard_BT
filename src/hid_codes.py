@@ -1,4 +1,3 @@
-# Essential scan codes (convert strings to integers)
 HID_SCAN_CODES = {
     'a': 0x04, 'b': 0x05, 'c': 0x06, 'd': 0x07, 'e': 0x08,
     'f': 0x09, 'g': 0x0A, 'h': 0x0B, 'i': 0x0C, 'j': 0x0D,
@@ -12,12 +11,11 @@ HID_SCAN_CODES = {
     'f1': 0x3A, 'f2': 0x3B, 'f3': 0x3C, 'f4': 0x3D
 }
 
-# Modifier mappings (CRITICAL for macOS)
 MODIFIERS = {
-    'ctrl': 0x01,    # Left Control
-    'shift': 0x02,   # Left Shift  
-    'alt': 0x04,     # Left Alt
-    'cmd': 0x08      # Left Command (GUI key)
+    'ctrl': 0x01,    
+    'shift': 0x02,  
+    'alt': 0x04,     
+    'cmd': 0x08     
 }
 
 
