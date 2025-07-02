@@ -193,20 +193,42 @@ class BluetoothHIDService:
             print(f"Failed to make discoverable: {e}")
             return False
     
+    def get_bluetooth_address(self):
+        """Get Pi's Bluetooth address from adapter"""
+        try:
+            adapter_props = dbus.Interface(
+                self.bus.get_object("org.bluez", self.adapter.object_path),
+                "org.freedesktop.DBus.Properties"
+            )
+            
+            address = adapter_props.Get("org.bluez.Adapter1", "Address")
+            print(f"Using Bluetooth address: {address}")
+            return str(address)
+            
+        except Exception as e:
+            print(f"Failed to get Bluetooth address: {e}")
+            return None
+
     def setup_hid_socket(self):
         """Create L2CAP socket for HID interrupt channel"""
         try:
+            # Get Pi's Bluetooth address
+            bt_address = self.get_bluetooth_address()
+            if not bt_address:
+                print("Failed to get Bluetooth address")
+                return False
+            
             self.hid_socket = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_SEQPACKET, socket.BTPROTO_L2CAP)
-            self.hid_socket.bind(('', self.HID_INTERRUPT_PSM))
+            self.hid_socket.bind((bt_address, self.HID_INTERRUPT_PSM))
             self.hid_socket.listen(1)
             
-            print(f"HID socket listening on PSM {self.HID_INTERRUPT_PSM}")
+            print(f"HID socket listening on {bt_address}:{self.HID_INTERRUPT_PSM}")
             return True
             
         except Exception as e:
             print(f"Failed to setup HID socket: {e}")
             return False
-    
+
     def wait_for_connection(self):
         """Wait for MacBook to connect"""
         try:
