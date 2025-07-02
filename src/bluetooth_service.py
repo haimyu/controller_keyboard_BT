@@ -209,7 +209,7 @@ class BluetoothHIDService:
             print(f"Failed to get Bluetooth address: {e}")
             return None
 
-    def setup_hid_socket(self):
+    def setup_hid_socket(zself):
         """Create L2CAP socket for HID interrupt channel"""
         try:
             # Get Pi's Bluetooth address
