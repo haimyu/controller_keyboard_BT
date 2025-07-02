@@ -2,79 +2,121 @@
 import dbus
 import dbus.service
 import dbus.mainloop.glib
-import socket
-import threading
+import os
+from gi.repository import GLib
+
+class BluetoothAgent(dbus.service.Object):
+    """Simple Bluetooth agent for auto-pairing"""
+    
+    def __init__(self, bus, path):
+        super().__init__(bus, path)
+        
+    @dbus.service.method("org.bluez.Agent1", in_signature="", out_signature="")
+    def Release(self):
+        print("Agent released")
+        
+    @dbus.service.method("org.bluez.Agent1", in_signature="os", out_signature="")
+    def AuthorizeService(self, device, uuid):
+        print(f"Authorizing service for {device}")
+        return
+        
+    @dbus.service.method("org.bluez.Agent1", in_signature="o", out_signature="")
+    def RequestAuthorization(self, device):
+        print(f"Auto-authorizing {device}")
+        return
+
+class BluetoothHIDDevice(dbus.service.Object):
+    
+    HID_DESCRIPTOR = bytes([
+        0x05, 0x01,  
+        0x09, 0x06,  
+        0xa1, 0x01,  
+        0x05, 0x07,  
+        0x19, 0xe0,  
+        0x29, 0xe7,  
+        0x15, 0x00,  
+        0x25, 0x01,  
+        0x75, 0x01,  
+        0x95, 0x08,  
+        0x81, 0x02,  
+        0x95, 0x01,  
+        0x75, 0x08,  
+        0x81, 0x03,  
+        0x95, 0x06,  
+        0x75, 0x08,  
+        0x15, 0x00,  
+        0x25, 0x65,  
+        0x05, 0x07,  
+        0x19, 0x00,  
+        0x29, 0x65,  
+        0x81, 0x00,  
+        0xc0         
+    ])
+    
+    def __init__(self, bus, path):
+        super().__init__(bus, path)
+        self.connected_devices = {}
+        
+    @dbus.service.method("org.bluez.Profile1", in_signature="oha{sv}", out_signature="")
+    def NewConnection(self, path, fd, properties):
+        print(f"MacBook connected: {path}")
+        self.connected_devices[path] = fd.take()
+        
+    @dbus.service.method("org.bluez.Profile1", in_signature="o", out_signature="")  
+    def RequestDisconnection(self, path):
+        print(f"MacBook disconnected: {path}")
+        if path in self.connected_devices:
+            os.close(self.connected_devices[path])
+            del self.connected_devices[path]
+            
+    def send_report(self, report_bytes):
+        if not self.connected_devices:
+            return False
+            
+        for path, fd in self.connected_devices.items():
+            try:
+                os.write(fd, bytes(report_bytes))
+                print(f"Sent HID report: {report_bytes}")
+                return True
+            except Exception as e:
+                print(f"Send failed: {e}")
+        return False
 
 class BluetoothHIDService:
-    """Real Bluetooth HID service using D-Bus and L2CAP sockets"""
-    
-    HID_UUID = "00001124-0000-1000-8000-00805f9b34fb"
-    HID_CONTROL_PSM = 17
-    HID_INTERRUPT_PSM = 19
-    
-    # HID descriptor for standard keyboard
-    HID_DESCRIPTOR = bytes([
-        0x05, 0x01,  # Usage Page (Generic Desktop)
-        0x09, 0x06,  # Usage (Keyboard)
-        0xa1, 0x01,  # Collection (Application)
-        0x05, 0x07,  # Usage Page (Key Codes)
-        0x19, 0xe0,  # Usage Minimum (224)
-        0x29, 0xe7,  # Usage Maximum (231)
-        0x15, 0x00,  # Logical Minimum (0)
-        0x25, 0x01,  # Logical Maximum (1)
-        0x75, 0x01,  # Report Size (1)
-        0x95, 0x08,  # Report Count (8)
-        0x81, 0x02,  # Input (Data, Variable, Absolute)
-        0x95, 0x01,  # Report Count (1)
-        0x75, 0x08,  # Report Size (8)
-        0x81, 0x03,  # Input (Constant)
-        0x95, 0x06,  # Report Count (6)
-        0x75, 0x08,  # Report Size (8)
-        0x15, 0x00,  # Logical Minimum (0)
-        0x25, 0x65,  # Logical Maximum (101)
-        0x05, 0x07,  # Usage Page (Key Codes)
-        0x19, 0x00,  # Usage Minimum (0)
-        0x29, 0x65,  # Usage Maximum (101)
-        0x81, 0x00,  # Input (Data, Array)
-        0xc0         # End Collection
-    ])
     
     def __init__(self):
         self.bus = None
         self.adapter = None
-        self.profile_manager = None
-        self.hid_socket = None
-        self.client_socket = None
+        self.device_manager = None
+        self.hid_device = None
+        self.agent = None
         self.running = False
         
     def start_service(self):
-        """Start the HID service"""
         print("Starting Bluetooth HID service...")
         
         if not self.setup_dbus():
             return False
             
-        if not self.register_hid_profile():
+        if not self.setup_agent():
+            return False
+            
+        if not self.create_hid_device():
+            return False
+            
+        if not self.register_device():
             return False
             
         if not self.make_discoverable():
             return False
             
-        if not self.setup_hid_socket():
-            return False
-            
         print("Bluetooth HID service ready!")
         print("Pair your MacBook with this device now")
-        
-        self.connection_thread = threading.Thread(target=self.wait_for_connection)
-        self.connection_thread.daemon = True
-        self.connection_thread.start()
         
         self.running = True
         return True
     
     def setup_dbus(self):
-        """Initialize D-Bus connection to BlueZ"""
         try:
             dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
             self.bus = dbus.SystemBus()
@@ -89,7 +131,7 @@ class BluetoothHIDService:
                 "org.bluez.Adapter1"
             )
             
-            self.profile_manager = dbus.Interface(
+            self.device_manager = dbus.Interface(
                 self.bus.get_object("org.bluez", "/org/bluez"),
                 "org.bluez.ProfileManager1"
             )
@@ -101,8 +143,28 @@ class BluetoothHIDService:
             print(f"D-Bus setup failed: {e}")
             return False
     
+    def setup_agent(self):
+        """Setup Bluetooth agent for pairing"""
+        try:
+            agent_path = "/assistive/keyboard/agent"
+            self.agent = BluetoothAgent(self.bus, agent_path)
+            
+            agent_manager = dbus.Interface(
+                self.bus.get_object("org.bluez", "/org/bluez"),
+                "org.bluez.AgentManager1"
+            )
+            
+            agent_manager.RegisterAgent(agent_path, "NoInputNoOutput")
+            agent_manager.RequestDefaultAgent(agent_path)
+            
+            print("Bluetooth agent registered")
+            return True
+            
+        except Exception as e:
+            print(f"Agent setup failed: {e}")
+            return False
+    
     def find_adapter(self):
-        """Find the first available Bluetooth adapter"""
         try:
             manager = dbus.Interface(
                 self.bus.get_object("org.bluez", "/"),
@@ -119,8 +181,18 @@ class BluetoothHIDService:
             
         return None
     
-    def register_hid_profile(self):
-        """Register HID profile with BlueZ"""
+    def create_hid_device(self):
+        try:
+            device_path = "/assistive/keyboard/hid"
+            self.hid_device = BluetoothHIDDevice(self.bus, device_path)
+            print("HID device created")
+            return True
+            
+        except Exception as e:
+            print(f"Failed to create HID device: {e}")
+            return False
+    
+    def register_device(self):
         try:
             profile_options = {
                 "ServiceRecord": self.create_sdp_record(),
@@ -130,11 +202,12 @@ class BluetoothHIDService:
                 "AutoConnect": dbus.Boolean(True)
             }
             
-            profile_path = "/assistive/keyboard/profile"
+            device_path = "/assistive/keyboard/hid"
+            hid_uuid = "00001124-0000-1000-8000-00805f9b34fb"
             
-            self.profile_manager.RegisterProfile(
-                profile_path,
-                self.HID_UUID,
+            self.device_manager.RegisterProfile(
+                device_path,
+                hid_uuid,
                 profile_options
             )
             
@@ -142,127 +215,138 @@ class BluetoothHIDService:
             return True
             
         except Exception as e:
-            print(f"HID profile registration failed: {e}")
+            print(f"Profile registration failed: {e}")
+            print(f"Detailed error: {str(e)}")
             return False
     
     def create_sdp_record(self):
-        """Create SDP record for HID keyboard"""
-        sdp_record = f"""
+        return """
         <?xml version="1.0" encoding="UTF-8" ?>
         <record>
             <attribute id="0x0001">
                 <sequence>
-                    <uuid value="{self.HID_UUID}" />
+                    <uuid value="0x1124" />
+                </sequence>
+            </attribute>
+            <attribute id="0x0004">
+                <sequence>
+                    <sequence>
+                        <uuid value="0x0100" />
+                        <uint16 value="0x0011" />
+                    </sequence>
+                    <sequence>
+                        <uuid value="0x0011" />
+                        <uint16 value="0x0013" />
+                    </sequence>
+                </sequence>
+            </attribute>
+            <attribute id="0x0005">
+                <sequence>
+                    <uuid value="0x1002" />
+                </sequence>
+            </attribute>
+            <attribute id="0x0009">
+                <sequence>
+                    <sequence>
+                        <uuid value="0x1124" />
+                        <uint16 value="0x0100" />
+                    </sequence>
+                </sequence>
+            </attribute>
+            <attribute id="0x000d">
+                <sequence>
+                    <sequence>
+                        <sequence>
+                            <uuid value="0x0100" />
+                            <uint16 value="0x0013" />
+                        </sequence>
+                        <sequence>
+                            <uuid value="0x0011" />
+                            <uint16 value="0x0013" />
+                        </sequence>
+                    </sequence>
                 </sequence>
             </attribute>
             <attribute id="0x0100">
                 <text value="Assistive Keyboard" />
             </attribute>
             <attribute id="0x0101">
-                <text value="HID Keyboard for Musicians" />
+                <text value="Keyboard" />
+            </attribute>
+            <attribute id="0x0102">
+                <text value="Apple Inc." />
+            </attribute>
+            <attribute id="0x0200">
+                <uint16 value="0x0100" />
+            </attribute>
+            <attribute id="0x0201">
+                <uint16 value="0x0111" />
+            </attribute>
+            <attribute id="0x0202">
+                <uint8 value="0x40" />
+            </attribute>
+            <attribute id="0x0203">
+                <uint8 value="0x21" />
             </attribute>
             <attribute id="0x0206">
                 <sequence>
                     <sequence>
                         <uint8 value="0x22" />
-                        <text encoding="hex" value="{self.HID_DESCRIPTOR.hex()}" />
+                        <text encoding="hex" value="05010906a101050719e029e71500250175019508810295017508810395067508150025650507190029658100c0" />
                     </sequence>
                 </sequence>
             </attribute>
         </record>
-        """
-        return sdp_record.strip()
+        """.strip()
     
     def make_discoverable(self):
-        """Make Pi discoverable as keyboard device"""
         try:
             adapter_props = dbus.Interface(
                 self.bus.get_object("org.bluez", self.adapter.object_path),
                 "org.freedesktop.DBus.Properties"
             )
             
+            adapter_props.Set("org.bluez.Adapter1", "Alias", "Assistive Keyboard")
             adapter_props.Set("org.bluez.Adapter1", "Powered", dbus.Boolean(True))
             adapter_props.Set("org.bluez.Adapter1", "Discoverable", dbus.Boolean(True))
             adapter_props.Set("org.bluez.Adapter1", "Pairable", dbus.Boolean(True))
             adapter_props.Set("org.bluez.Adapter1", "DiscoverableTimeout", dbus.UInt32(0))
             
-            print("Device is discoverable")
+            print("Device is discoverable as 'Assistive Keyboard'")
             return True
             
         except Exception as e:
             print(f"Failed to make discoverable: {e}")
             return False
     
-    def get_bluetooth_address(self):
-        """Get Pi's Bluetooth address from adapter"""
-        try:
-            adapter_props = dbus.Interface(
-                self.bus.get_object("org.bluez", self.adapter.object_path),
-                "org.freedesktop.DBus.Properties"
-            )
-            
-            address = adapter_props.Get("org.bluez.Adapter1", "Address")
-            print(f"Using Bluetooth address: {address}")
-            return str(address)
-            
-        except Exception as e:
-            print(f"Failed to get Bluetooth address: {e}")
-            return None
-
-    def setup_hid_socket(zself):
-        """Create L2CAP socket for HID interrupt channel"""
-        try:
-            # Get Pi's Bluetooth address
-            bt_address = self.get_bluetooth_address()
-            if not bt_address:
-                print("Failed to get Bluetooth address")
-                return False
-            
-            self.hid_socket = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_SEQPACKET, socket.BTPROTO_L2CAP)
-            self.hid_socket.bind((bt_address, self.HID_INTERRUPT_PSM))
-            self.hid_socket.listen(1)
-            
-            print(f"HID socket listening on {bt_address}:{self.HID_INTERRUPT_PSM}")
-            return True
-            
-        except Exception as e:
-            print(f"Failed to setup HID socket: {e}")
-            return False
-
-    def wait_for_connection(self):
-        """Wait for MacBook to connect"""
-        try:
-            print("Waiting for MacBook connection...")
-            self.client_socket, address = self.hid_socket.accept()
-            print(f"MacBook connected: {address}")
-            
-        except Exception as e:
-            print(f"Connection failed: {e}")
-    
     def send_hid_report(self, report_bytes):
-        """Send 8-byte HID report to MacBook"""
-        if not self.client_socket:
-            print("No MacBook connection available")
+        if not self.hid_device:
+            print("HID device not ready")
             return False
             
-        try:
-            report = bytes(report_bytes)
-            self.client_socket.send(report)
-            print(f"Sent HID report: {report_bytes}")
-            return True
-            
-        except Exception as e:
-            print(f"Failed to send HID report: {e}")
-            return False
+        return self.hid_device.send_report(report_bytes)
     
     def stop_service(self):
-        """Stop the HID service"""
         self.running = False
         
-        if self.client_socket:
-            self.client_socket.close()
+        try:
+            if self.device_manager and self.hid_device:
+                device_path = "/assistive/keyboard/hid"
+                self.device_manager.UnregisterProfile(device_path)
+                print("HID profile unregistered")
+        except Exception as e:
+            print(f"Failed to unregister profile: {e}")
             
-        if self.hid_socket:
-            self.hid_socket.close()
+        try:
+            if self.agent:
+                agent_manager = dbus.Interface(
+                    self.bus.get_object("org.bluez", "/org/bluez"),
+                    "org.bluez.AgentManager1"
+                )
+                agent_path = "/assistive/keyboard/agent"
+                agent_manager.UnregisterAgent(agent_path)
+                print("Agent unregistered")
+        except Exception as e:
+            print(f"Failed to unregister agent: {e}")
             
         print("Bluetooth HID service stopped")
