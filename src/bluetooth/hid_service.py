@@ -66,7 +66,6 @@ class BluetoothHIDService:
         
         self.connection_monitor.stop()
         self.socket_manager.cleanup()
-        self.dbus_manager.cleanup()
         
         print("Service stopped cleanly")
     
