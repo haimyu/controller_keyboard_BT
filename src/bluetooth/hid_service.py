@@ -1,8 +1,3 @@
-"""
-Clean architecture implementation of Bluetooth HID service.
-This class orchestrates the various components but doesn't implement their details.
-"""
-
 import threading
 import time
 from .dbus_manager import DBusManager
@@ -48,21 +43,18 @@ class BluetoothHIDService:
         )
         
         self.running = True
-        print("✅ Bluetooth HID service ready!")
+        print("Bluetooth HID service ready!")
         return True
     
     def _on_connection_established(self):
         """Callback when both HID channels are connected"""
         self.connection_established = True
-        print("🎉 HID device fully operational!")
+        print("HID device fully operational!")
     
     def send_hid_report(self, report_bytes):
-        """
-        Send HID report using socket manager.
-        Clean delegation to appropriate component.
-        """
+        """Send HID report using socket manager"""
         if not self.connection_established:
-            print("❌ Device not connected")
+            print("Device not connected")
             return False
             
         return self.socket_manager.send_hid_report(report_bytes)
@@ -76,7 +68,7 @@ class BluetoothHIDService:
         self.socket_manager.cleanup()
         self.dbus_manager.cleanup()
         
-        print("✅ Service stopped cleanly")
+        print("Service stopped cleanly")
     
     def get_status(self):
         """Get comprehensive status from all components"""

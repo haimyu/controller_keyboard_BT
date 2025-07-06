@@ -1,16 +1,8 @@
-"""
-Monitors HID connection establishment and health.
-Single responsibility: Connection state management.
-"""
-
 import threading
 import time
 
 class ConnectionMonitor:
-    """
-    Monitors HID connection establishment.
-    Focused on connection state and health monitoring.
-    """
+    """Monitors HID connection establishment"""
     
     def __init__(self):
         self.monitoring = False
@@ -27,21 +19,21 @@ class ConnectionMonitor:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
         
-        print("✅ Connection monitoring started")
+        print("Connection monitoring started")
     
     def _monitor_connections(self):
         """Monitor connection establishment"""
         try:
-            print("⏳ Monitoring for HID connections...")
+            print("Monitoring for HID connections...")
             
             if self.socket_manager.accept_connections():
                 if self.callback:
                     self.callback()
             else:
-                print("❌ Connection monitoring failed")
+                print("Connection monitoring failed")
                 
         except Exception as e:
-            print(f"❌ Connection monitoring error: {e}")
+            print(f"Connection monitoring error: {e}")
     
     def stop(self):
         """Stop connection monitoring"""

@@ -4,9 +4,7 @@ import subprocess
 
 
 class SocketManager:
-    """
-    Manages HID L2CAP sockets for control and interrupt channels.
-    """
+    """Manages HID L2CAP sockets for control and interrupt channels"""
     
     HID_CONTROL_PSM = 17
     HID_INTERRUPT_PSM = 19
@@ -33,11 +31,11 @@ class SocketManager:
             if not self.interrupt_socket:
                 return False
                 
-            print("✅ Both HID sockets created")
+            print("Both HID sockets created")
             return True
             
         except Exception as e:
-            print(f"❌ Socket setup failed: {e}")
+            print(f"Socket setup failed: {e}")
             return False
     
     def _create_socket(self, psm):
@@ -47,11 +45,11 @@ class SocketManager:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((self.bt_address, psm))
             sock.listen(1)
-            print(f"✅ Socket created for PSM {psm}")
+            print(f"Socket created for PSM {psm}")
             return sock
             
         except Exception as e:
-            print(f"❌ Failed to create socket for PSM {psm}: {e}")
+            print(f"Failed to create socket for PSM {psm}: {e}")
             return None
     
     def _get_bt_address(self):
@@ -69,34 +67,34 @@ class SocketManager:
         try:
             if self.control_socket:
                 self.control_client, addr = self.control_socket.accept()
-                print(f"✅ Control connected: {addr}")
+                print(f"Control connected: {addr}")
             
             if self.interrupt_socket:
                 self.interrupt_client, addr = self.interrupt_socket.accept()
-                print(f"✅ Interrupt connected: {addr}")
+                print(f"Interrupt connected: {addr}")
                 
             return True
             
         except Exception as e:
-            print(f"❌ Connection acceptance failed: {e}")
+            print(f"Connection acceptance failed: {e}")
             return False
     
     def send_hid_report(self, report_bytes):
         """Send HID report on interrupt channel"""
         if not self.interrupt_client:
-            print("❌ No interrupt connection")
+            print("No interrupt connection")
             return False
             
         try:
             if len(report_bytes) != 8:
-                print(f"❌ Invalid report length: {len(report_bytes)}")
+                print(f"Invalid report length: {len(report_bytes)}")
                 return False
                 
             bytes_sent = self.interrupt_client.send(bytes(report_bytes))
             return bytes_sent == len(report_bytes)
             
         except Exception as e:
-            print(f"❌ Send failed: {e}")
+            print(f"Send failed: {e}")
             return False
     
     def get_status(self):

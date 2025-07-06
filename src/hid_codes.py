@@ -1,8 +1,3 @@
-"""
-HID keyboard scan codes and modifier definitions
-Fixed for proper macOS compatibility
-"""
-
 HID_SCAN_CODES = {
     'a': 0x04, 'b': 0x05, 'c': 0x06, 'd': 0x07, 'e': 0x08,
     'f': 0x09, 'g': 0x0A, 'h': 0x0B, 'i': 0x0C, 'j': 0x0D,
@@ -26,7 +21,6 @@ HID_SCAN_CODES = {
     'right': 0x4F, 'left': 0x50, 'down': 0x51, 'up': 0x52
 }
 
-# CORRECTED modifiers for macOS
 MODIFIERS = {
     'ctrl': 0x01,     # Left Control
     'shift': 0x02,    # Left Shift  
@@ -39,10 +33,7 @@ MODIFIERS = {
 }
 
 def shortcut_to_hid_report(shortcut_string):
-    """
-    Convert shortcut string to proper 8-byte HID report for macOS
-    macOS expects: [modifier, reserved, key1, key2, key3, key4, key5, key6]
-    """
+    """Convert shortcut string to proper 8-byte HID report for macOS"""
     parts = shortcut_string.lower().split('+')
     
     modifier_byte = 0x00

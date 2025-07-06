@@ -1,15 +1,6 @@
-"""
-Builds Service Discovery Protocol records for HID devices.
-Single responsibility: SDP record generation.
-"""
-
 class SDPRecordBuilder:
-    """
-    Builds SDP records for HID devices.
-    Focused on protocol-specific record generation.
-    """
-    
-    # Standard HID keyboard descriptor
+    """Builds SDP records for HID devices"""
+
     HID_KEYBOARD_DESCRIPTOR = bytes([
         0x05, 0x01,  # Usage Page (Generic Desktop)
         0x09, 0x06,  # Usage (Keyboard)

@@ -22,7 +22,7 @@ class DBusManager:
             
             self.adapter_path = self._find_adapter()
             if not self.adapter_path:
-                print("❌ No Bluetooth adapter found")
+                print("No Bluetooth adapter found")
                 return False
                 
             self.adapter = dbus.Interface(
@@ -35,11 +35,11 @@ class DBusManager:
                 "org.bluez.ProfileManager1"
             )
             
-            print("✅ D-Bus connection established")
+            print("D-Bus connection established")
             return True
             
         except Exception as e:
-            print(f"❌ D-Bus initialization failed: {e}")
+            print(f"D-Bus initialization failed: {e}")
             return False
     
     def _find_adapter(self):
@@ -56,7 +56,7 @@ class DBusManager:
                     return path
                     
         except Exception as e:
-            print(f"❌ Failed to find adapter: {e}")
+            print(f"Failed to find adapter: {e}")
             
         return None
     
@@ -69,11 +69,11 @@ class DBusManager:
             )
             
             if result.returncode == 0:
-                print("✅ Device class set to keyboard")
+                print("Device class set to keyboard")
             return True
             
         except Exception as e:
-            print(f"⚠️  Device class note: {e}")
+            print(f"Device class note: {e}")
             return True
     
     def register_hid_profile(self, sdp_record):
@@ -95,11 +95,11 @@ class DBusManager:
                 profile_options
             )
             
-            print("✅ HID profile registered")
+            print("HID profile registered")
             return True
             
         except Exception as e:
-            print(f"❌ Profile registration failed: {e}")
+            print(f"Profile registration failed: {e}")
             return False
     
     def make_discoverable(self):
@@ -120,11 +120,11 @@ class DBusManager:
             subprocess.run(["hciconfig", "hci0", "piscan"], check=False)
             subprocess.run(["hciconfig", "hci0", "sspmode", "1"], check=False)
             
-            print("✅ Device discoverable")
+            print("Device discoverable")
             return True
             
         except Exception as e:
-            print(f"❌ Failed to make discoverable: {e}")
+            print(f"Failed to make discoverable: {e}")
             return False
     
     def get_bluetooth_address(self):
@@ -138,7 +138,7 @@ class DBusManager:
             return str(adapter_props.Get("org.bluez.Adapter1", "Address"))
             
         except Exception as e:
-            print(f"❌ Failed to get address: {e}")
+            print(f"Failed to get address: {e}")
             return None
     
     def get_status(self):
@@ -148,9 +148,4 @@ class DBusManager:
             'adapter_found': self.adapter is not None,
             'profile_manager_ready': self.profile_manager is not None
         }
-    
-    def cleanup(self):
-        """Clean up D-Bus resources"""
-        # D-Bus cleanup if needed
-        pass
 
