@@ -86,7 +86,7 @@ class SocketManager:
             return False
             
         try:
-            if len(report_bytes) != 8:
+            if len(report_bytes) != 9:
                 print(f"Invalid report length: {len(report_bytes)}")
                 return False
                 

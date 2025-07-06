@@ -51,8 +51,7 @@ def shortcut_to_hid_report(shortcut_string):
     
     key_codes = key_codes[:6]
     
-    report = [modifier_byte, 0x00] + key_codes
-    
+    report = [0x01, modifier_byte, 0x00] + key_codes
     return report
 
 def create_key_release_report():

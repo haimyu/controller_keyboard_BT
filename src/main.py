@@ -177,8 +177,8 @@ class AssistiveKeyboard:
             self.report_count += 1
             
             time.sleep(0.05) 
-            # release_report = create_key_release_report()
-            # self.bluetooth_service.send_hid_report(release_report)
+            release_report = create_key_release_report()
+            self.bluetooth_service.send_hid_report(release_report)
             
             if self.report_count % 10 == 0:
                 self._print_performance_stats()

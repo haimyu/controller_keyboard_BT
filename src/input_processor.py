@@ -13,9 +13,6 @@ class InputProcessor:
             shortcut_key = f"button_{number}"
             if shortcut_key in self.shortcuts:
                 return self.shortcuts[shortcut_key]
-        elif event_type == 1 and value == 0:
-            release_report = create_key_release_report()
-            BluetoothHIDService.send_hid_report(release_report)
         
         elif event_type == 2: 
             if number == 1:
